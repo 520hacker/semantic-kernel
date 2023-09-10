@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Web;
+using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Skills.OpenAPI.Model;
 using Xunit;
 
@@ -31,7 +32,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host/", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host/", url.OriginalString);
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host-override/", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host-override/", url.OriginalString);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host/fake-path-value/other_fake_path_section", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host/fake-path-value/other_fake_path_section", url.OriginalString);
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host/fake-default-path/other_fake_path_section", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host/fake-default-path/other_fake_path_section", url.OriginalString);
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host/?p1=v1&p2=v2", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host/?p1=v1&p2=v2", url.OriginalString);
     }
 
     [Fact]
@@ -186,7 +187,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host/?p1=dv1&p2=dv2", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host/?p1=dv1&p2=dv2", url.OriginalString);
     }
 
     [Fact]
@@ -223,7 +224,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host/?p2=v2", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host/?p2=v2", url.OriginalString);
     }
 
     [Fact]
@@ -257,7 +258,7 @@ public class RestApiOperationTests
         };
 
         //Act and assert
-        Assert.Throws<RestApiOperationException>(() => sut.BuildOperationUrl(arguments));
+        Assert.Throws<SKException>(() => sut.BuildOperationUrl(arguments));
     }
 
     [Theory]
@@ -326,7 +327,7 @@ public class RestApiOperationTests
         var url = sut.BuildOperationUrl(arguments);
 
         // Assert
-        Assert.Equal(@"https://fake-random-test-host-override/fake-path-value/?p1=dv1&p2=v2", url.OriginalString);
+        Assert.Equal("https://fake-random-test-host-override/fake-path-value/?p1=dv1&p2=v2", url.OriginalString);
     }
 
     [Fact]
@@ -404,7 +405,7 @@ public class RestApiOperationTests
         void Act() => sut.RenderHeaders(new Dictionary<string, string>());
 
         // Assert
-        Assert.Throws<RestApiOperationException>(Act);
+        Assert.Throws<SKException>(Act);
     }
 
     [Fact]
@@ -429,7 +430,7 @@ public class RestApiOperationTests
         void Act() => sut.RenderHeaders(new Dictionary<string, string>());
 
         // Assert
-        Assert.Throws<RestApiOperationException>(Act);
+        Assert.Throws<SKException>(Act);
     }
 
     [Fact]

@@ -1,9 +1,11 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
-using System.Threading;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SemanticKernel.SkillDefinition;
 
 namespace Microsoft.SemanticKernel.Orchestration;
@@ -11,62 +13,33 @@ namespace Microsoft.SemanticKernel.Orchestration;
 /// <summary>
 /// Semantic Kernel context.
 /// </summary>
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class SKContext
 {
+    /// <summary>
+    /// The culture currently associated with this context.
+    /// </summary>
+    private CultureInfo _culture;
+
     /// <summary>
     /// Print the processed input, aka the current data after any processing occurred.
     /// </summary>
     /// <returns>Processed input, aka result</returns>
     public string Result => this.Variables.ToString();
 
-    // /// <summary>
-    // /// Whether an error occurred while executing functions in the pipeline.
-    // /// </summary>
-    // public bool ErrorOccurred => this.Variables.ErrorOccurred;
+    /// <summary>
+    /// When a prompt is processed, aka the current data after any model results processing occurred.
+    /// (One prompt can have multiple results).
+    /// </summary>
+    public IReadOnlyCollection<ModelResult> ModelResults { get; set; } = Array.Empty<ModelResult>();
 
     /// <summary>
-    /// Whether an error occurred while executing functions in the pipeline.
+    /// The culture currently associated with this context.
     /// </summary>
-    public bool ErrorOccurred { get; private set; }
-
-    /// <summary>
-    /// Error details.
-    /// </summary>
-    public string LastErrorDescription { get; private set; } = string.Empty;
-
-    /// <summary>
-    /// When an error occurs, this is the most recent exception.
-    /// </summary>
-    public Exception? LastException { get; private set; }
-
-    /// <summary>
-    /// The token to monitor for cancellation requests.
-    /// </summary>
-    public CancellationToken CancellationToken { get; }
-
-    /// <summary>
-    /// Shortcut into user data, access variables by name
-    /// </summary>
-    /// <param name="name">Variable name</param>
-    public string this[string name]
+    public CultureInfo Culture
     {
-        get => this.Variables[name];
-        set => this.Variables[name] = value;
-    }
-
-    /// <summary>
-    /// Call this method to signal when an error occurs.
-    /// In the usual scenarios this is also how execution is stopped, e.g. to inform the user or take necessary steps.
-    /// </summary>
-    /// <param name="errorDescription">Error description</param>
-    /// <param name="exception">If available, the exception occurred</param>
-    /// <returns>The current instance</returns>
-    public SKContext Fail(string errorDescription, Exception? exception = null)
-    {
-        this.ErrorOccurred = true;
-        this.LastErrorDescription = errorDescription;
-        this.LastException = exception;
-        return this;
+        get => this._culture;
+        set => this._culture = value ?? CultureInfo.CurrentCulture;
     }
 
     /// <summary>
@@ -75,59 +48,30 @@ public sealed class SKContext
     public ContextVariables Variables { get; }
 
     /// <summary>
-    /// Semantic memory
-    /// </summary>
-    public ISemanticTextMemory Memory { get; }
-
-    /// <summary>
     /// Read only skills collection
     /// </summary>
-    public IReadOnlySkillCollection? Skills { get; internal set; }
-
-    /// <summary>
-    /// Access registered functions by skill + name. Not case sensitive.
-    /// The function might be native or semantic, it's up to the caller handling it.
-    /// </summary>
-    /// <param name="skillName">Skill name</param>
-    /// <param name="functionName">Function name</param>
-    /// <returns>Delegate to execute the function</returns>
-    public ISKFunction Func(string skillName, string functionName)
-    {
-        if (this.Skills is null)
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.SkillCollectionNotSet,
-                "Skill collection not found in the context");
-        }
-
-        return this.Skills.GetFunction(skillName, functionName);
-    }
+    public IReadOnlySkillCollection Skills { get; }
 
     /// <summary>
     /// App logger
     /// </summary>
-    public ILogger Log { get; }
+    public ILoggerFactory LoggerFactory { get; }
 
     /// <summary>
     /// Constructor for the context.
     /// </summary>
     /// <param name="variables">Context variables to include in context.</param>
-    /// <param name="memory">Semantic text memory unit to include in context.</param>
     /// <param name="skills">Skills to include in context.</param>
-    /// <param name="logger">Logger for operations in context.</param>
-    /// <param name="cancellationToken">Optional cancellation token for operations in context.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If null, no logging will be performed.</param>
     public SKContext(
-        ContextVariables variables,
-        ISemanticTextMemory memory,
-        IReadOnlySkillCollection? skills,
-        ILogger logger,
-        CancellationToken cancellationToken = default)
+        ContextVariables? variables = null,
+        IReadOnlySkillCollection? skills = null,
+        ILoggerFactory? loggerFactory = null)
     {
-        this.Variables = variables;
-        this.Memory = memory;
-        this.Skills = skills;
-        this.Log = logger;
-        this.CancellationToken = cancellationToken;
+        this.Variables = variables ?? new();
+        this.Skills = skills ?? NullReadOnlySkillCollection.Instance;
+        this.LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        this._culture = CultureInfo.CurrentCulture;
     }
 
     /// <summary>
@@ -137,6 +81,60 @@ public sealed class SKContext
     /// <returns>Processed input, aka result, or last exception message if any</returns>
     public override string ToString()
     {
-        return this.ErrorOccurred ? $"Error: {this.LastErrorDescription}" : this.Result;
+        return this.ErrorOccurred ? $"Error: {this.LastException?.Message}" : this.Result;
     }
+
+    /// <summary>
+    /// Create a clone of the current context, using the same kernel references (memory, skills, logger)
+    /// and a new set variables, so that variables can be modified without affecting the original context.
+    /// </summary>
+    /// <returns>A new context copied from the current one</returns>
+    public SKContext Clone()
+    {
+        return new SKContext(
+            variables: this.Variables.Clone(),
+            skills: this.Skills,
+            loggerFactory: this.LoggerFactory)
+        {
+            Culture = this.Culture,
+            LastException = this.LastException
+        };
+    }
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay
+    {
+        get
+        {
+            if (this.ErrorOccurred)
+            {
+                return $"Error: {this.LastException?.Message}";
+            }
+
+            string display = this.Variables.DebuggerDisplay;
+
+            if (this.Skills is IReadOnlySkillCollection skills)
+            {
+                var view = skills.GetFunctionsView();
+                display += $", Skills = {view.NativeFunctions.Count + view.SemanticFunctions.Count}";
+            }
+
+            display += $", Culture = {this.Culture.EnglishName}";
+
+            return display;
+        }
+    }
+
+    #region Error handling
+    /// <summary>
+    /// Whether an error occurred while executing functions in the pipeline.
+    /// </summary>
+    public bool ErrorOccurred => this.LastException != null;
+
+    /// <summary>
+    /// When an error occurs, this is the most recent exception.
+    /// </summary>
+    public Exception? LastException { get; internal set; }
+
+    #endregion
 }

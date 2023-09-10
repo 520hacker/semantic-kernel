@@ -104,16 +104,14 @@ internal class GrpcOperationRunner
     /// <returns>The channel address.</returns>
     private string GetAddress(GrpcOperation operation, IDictionary<string, string> arguments)
     {
-        string? address = null;
-
-        if (!arguments.TryGetValue(GrpcOperation.AddressArgumentName, out address))
+        if (!arguments.TryGetValue(GrpcOperation.AddressArgumentName, out string? address))
         {
             address = operation.Address;
         }
 
         if (string.IsNullOrEmpty(address))
         {
-            throw new GrpcOperationException($"No address provided for the '{operation.Name}' gRPC operation.");
+            throw new SKException($"No address provided for the '{operation.Name}' gRPC operation.");
         }
 
         return address!;
@@ -157,14 +155,14 @@ internal class GrpcOperationRunner
         //Getting 'payload' argument to by used as gRPC request message
         if (!arguments.TryGetValue(GrpcOperation.PayloadArgumentName, out var payload))
         {
-            throw new GrpcOperationException($"No '{GrpcOperation.PayloadArgumentName}' argument representing gRPC request message is found for the '{operation.Name}' gRPC operation.");
+            throw new SKException($"No '{GrpcOperation.PayloadArgumentName}' argument representing gRPC request message is found for the '{operation.Name}' gRPC operation.");
         }
 
         //Deserializing JSON payload to gRPC request message
         var instance = JsonSerializer.Deserialize(payload, type, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (instance == null)
         {
-            throw new GrpcOperationException($"Impossible to create gRPC request message for the '{operation.Name}' gRPC operation.");
+            throw new SKException($"Impossible to create gRPC request message for the '{operation.Name}' gRPC operation.");
         }
 
         return instance;
@@ -228,7 +226,7 @@ internal class GrpcOperationRunner
         var type = typeBuilder.CreateTypeInfo();
         if (type == null)
         {
-            throw new GrpcOperationException($"Impossible to create type for '{dataContractMetadata.Name}' data contract.");
+            throw new SKException($"Impossible to create type for '{dataContractMetadata.Name}' data contract.");
         }
 
         return type;

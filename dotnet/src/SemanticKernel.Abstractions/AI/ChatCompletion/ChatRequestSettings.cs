@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.SemanticKernel.SemanticFunctions;
 
 namespace Microsoft.SemanticKernel.AI.ChatCompletion;
 
@@ -43,7 +44,37 @@ public class ChatRequestSettings
     public IList<string> StopSequences { get; set; } = Array.Empty<string>();
 
     /// <summary>
+    /// How many completions to generate for each prompt. Default is 1.
+    /// Note: Because this parameter generates many completions, it can quickly consume your token quota.
+    /// Use carefully and ensure that you have reasonable settings for max_tokens and stop.
+    /// </summary>
+    public int ResultsPerPrompt { get; set; } = 1;
+
+    /// <summary>
     /// The maximum number of tokens to generate in the completion.
     /// </summary>
-    public int MaxTokens { get; set; } = 256;
+    public int? MaxTokens { get; set; }
+
+    /// <summary>
+    /// Modify the likelihood of specified tokens appearing in the completion.
+    /// </summary>
+    public IDictionary<int, int> TokenSelectionBiases { get; set; } = new Dictionary<int, int>();
+
+    /// <summary>
+    /// Create a new settings object with the values from another settings object.
+    /// </summary>
+    /// <param name="config"></param>
+    /// <returns>An instance of <see cref="ChatRequestSettings"/> </returns>
+    public static ChatRequestSettings FromCompletionConfig(PromptTemplateConfig.CompletionConfig config)
+    {
+        return new ChatRequestSettings
+        {
+            Temperature = config.Temperature,
+            TopP = config.TopP,
+            PresencePenalty = config.PresencePenalty,
+            FrequencyPenalty = config.FrequencyPenalty,
+            MaxTokens = config.MaxTokens,
+            StopSequences = config.StopSequences,
+        };
+    }
 }

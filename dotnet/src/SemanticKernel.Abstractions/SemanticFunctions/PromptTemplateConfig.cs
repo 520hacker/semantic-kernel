@@ -56,7 +56,7 @@ public class PromptTemplateConfig
         /// </summary>
         [JsonPropertyName("max_tokens")]
         [JsonPropertyOrder(5)]
-        public int MaxTokens { get; set; } = 256;
+        public int? MaxTokens { get; set; }
 
         /// <summary>
         /// Stop sequences are optional sequences that tells the AI model when to stop generating tokens.
@@ -65,6 +65,20 @@ public class PromptTemplateConfig
         [JsonPropertyOrder(6)]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<string> StopSequences { get; set; } = new();
+
+        /// <summary>
+        /// When provided will be used to set the system prompt while using Chat Completions.
+        /// </summary>
+        [JsonPropertyName("chat_system_prompt")]
+        [JsonPropertyOrder(7)]
+        public string? ChatSystemPrompt { get; set; }
+
+        /// <summary>
+        /// When provided will be used to select the AI service used.
+        /// </summary>
+        [JsonPropertyName("service_id")]
+        [JsonPropertyOrder(8)]
+        public string? ServiceId { get; set; }
     }
 
     /// <summary>
@@ -100,6 +114,9 @@ public class PromptTemplateConfig
     /// </summary>
     public class InputConfig
     {
+        /// <summary>
+        /// Gets or sets the list of input parameters.
+        /// </summary>
         [JsonPropertyName("parameters")]
         [JsonPropertyOrder(1)]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -153,7 +170,7 @@ public class PromptTemplateConfig
     public InputConfig Input { get; set; } = new();
 
     /// <summary>
-    /// Remove some default properties to reduce the JSON complexity.
+    /// Removes some default properties to reduce the JSON complexity.
     /// </summary>
     /// <returns>Compacted prompt template configuration.</returns>
     public PromptTemplateConfig Compact()
@@ -176,14 +193,10 @@ public class PromptTemplateConfig
     /// </summary>
     /// <param name="json">JSON of the prompt template configuration.</param>
     /// <returns>Prompt template configuration.</returns>
+    /// <exception cref="ArgumentException">Thrown when the deserialization returns null.</exception>
     public static PromptTemplateConfig FromJson(string json)
     {
         var result = Json.Deserialize<PromptTemplateConfig>(json);
-        if (result is null)
-        {
-            throw new ArgumentException("Unable to deserialize prompt template config from argument. The deserialization returned null.", nameof(json));
-        }
-
-        return result;
+        return result ?? throw new ArgumentException("Unable to deserialize prompt template config from argument. The deserialization returned null.", nameof(json));
     }
 }

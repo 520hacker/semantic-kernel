@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.AI.TextCompletion;
-using Microsoft.SemanticKernel.Memory;
+using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Orchestration;
-using Microsoft.SemanticKernel.Planning;
 using Microsoft.SemanticKernel.SemanticFunctions;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Moq;
@@ -25,9 +24,7 @@ public sealed class SequentialPlannerTests
     {
         // Arrange
         var kernel = new Mock<IKernel>();
-        kernel.Setup(x => x.Log).Returns(new Mock<ILogger>().Object);
-
-        var memory = new Mock<ISemanticTextMemory>();
+        kernel.Setup(x => x.LoggerFactory).Returns(new Mock<ILoggerFactory>().Object);
 
         var input = new List<(string name, string skillName, string description, bool isSemantic)>()
         {
@@ -46,8 +43,8 @@ public sealed class SequentialPlannerTests
             functionsView.AddFunction(functionView);
 
             mockFunction.Setup(x =>
-                    x.InvokeAsync(It.IsAny<SKContext>(), It.IsAny<CompleteRequestSettings>(), It.IsAny<ILogger>(), It.IsAny<CancellationToken>()))
-                .Returns<SKContext, CompleteRequestSettings, ILogger, CancellationToken>((context, settings, log, cancel) =>
+                    x.InvokeAsync(It.IsAny<SKContext>(), It.IsAny<CompleteRequestSettings>(), It.IsAny<CancellationToken>()))
+                .Returns<SKContext, CompleteRequestSettings, CancellationToken>((context, settings, cancellationToken) =>
                 {
                     context.Variables.Update("MOCK FUNCTION CALLED");
                     return Task.FromResult(context);
@@ -66,16 +63,14 @@ public sealed class SequentialPlannerTests
 
         var context = new SKContext(
             new ContextVariables(),
-            memory.Object,
             skills.Object,
-            new Mock<ILogger>().Object
+            new Mock<ILoggerFactory>().Object
         );
 
         var returnContext = new SKContext(
             new ContextVariables(),
-            memory.Object,
             skills.Object,
-            new Mock<ILogger>().Object
+            new Mock<ILoggerFactory>().Object
         );
         var planString =
             @"
@@ -92,10 +87,9 @@ public sealed class SequentialPlannerTests
         mockFunctionFlowFunction.Setup(x => x.InvokeAsync(
             It.IsAny<SKContext>(),
             null,
-            null,
             default
-        )).Callback<SKContext, CompleteRequestSettings, ILogger, CancellationToken>(
-            (c, s, l, ct) => c.Variables.Update("Hello world!")
+        )).Callback<SKContext, CompleteRequestSettings, CancellationToken>(
+            (c, s, ct) => c.Variables.Update("Hello world!")
         ).Returns(() => Task.FromResult(returnContext));
 
         // Mock Skills
@@ -111,7 +105,7 @@ public sealed class SequentialPlannerTests
         var planner = new Microsoft.SemanticKernel.Planning.SequentialPlanner(kernel.Object);
 
         // Act
-        var plan = await planner.CreatePlanAsync(goal);
+        var plan = await planner.CreatePlanAsync(goal, default);
 
         // Assert
         Assert.Equal(goal, plan.Description);
@@ -142,12 +136,11 @@ public sealed class SequentialPlannerTests
     {
         // Arrange
         var kernel = new Mock<IKernel>();
-        // kernel.Setup(x => x.Log).Returns(new Mock<ILogger>().Object);
 
         var planner = new Microsoft.SemanticKernel.Planning.SequentialPlanner(kernel.Object);
 
         // Act
-        await Assert.ThrowsAsync<PlanningException>(async () => await planner.CreatePlanAsync(""));
+        await Assert.ThrowsAsync<SKException>(async () => await planner.CreatePlanAsync(""));
     }
 
     [Fact]
@@ -155,37 +148,31 @@ public sealed class SequentialPlannerTests
     {
         // Arrange
         var kernel = new Mock<IKernel>();
-        // kernel.Setup(x => x.Log).Returns(new Mock<ILogger>().Object);
-        var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
 
         var functionsView = new FunctionsView();
         skills.Setup(x => x.GetFunctionsView(It.IsAny<bool>(), It.IsAny<bool>())).Returns(functionsView);
 
-        var planString =
-            @"<plan>notvalid<</plan>";
+        var planString = "<plan>notvalid<</plan>";
         var returnContext = new SKContext(
             new ContextVariables(planString),
-            memory.Object,
             skills.Object,
-            new Mock<ILogger>().Object
+            new Mock<ILoggerFactory>().Object
         );
 
         var context = new SKContext(
             new ContextVariables(),
-            memory.Object,
             skills.Object,
-            new Mock<ILogger>().Object
+            new Mock<ILoggerFactory>().Object
         );
 
         var mockFunctionFlowFunction = new Mock<ISKFunction>();
         mockFunctionFlowFunction.Setup(x => x.InvokeAsync(
             It.IsAny<SKContext>(),
             null,
-            null,
             default
-        )).Callback<SKContext, CompleteRequestSettings, ILogger, CancellationToken?>(
-            (c, s, l, ct) => c.Variables.Update("Hello world!")
+        )).Callback<SKContext, CompleteRequestSettings, CancellationToken>(
+            (c, s, ct) => c.Variables.Update("Hello world!")
         ).Returns(() => Task.FromResult(returnContext));
 
         // Mock Skills
@@ -201,7 +188,7 @@ public sealed class SequentialPlannerTests
         var planner = new Microsoft.SemanticKernel.Planning.SequentialPlanner(kernel.Object);
 
         // Act
-        await Assert.ThrowsAsync<PlanningException>(async () => await planner.CreatePlanAsync("goal"));
+        await Assert.ThrowsAsync<SKException>(async () => await planner.CreatePlanAsync("goal"));
     }
 
     // Method to create Mock<ISKFunction> objects

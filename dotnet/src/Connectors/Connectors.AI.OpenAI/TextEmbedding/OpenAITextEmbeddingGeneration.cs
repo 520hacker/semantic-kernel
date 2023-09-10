@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
@@ -13,7 +14,7 @@ namespace Microsoft.SemanticKernel.Connectors.AI.OpenAI.TextEmbedding;
 /// <summary>
 /// OpenAI text embedding service.
 /// </summary>
-public sealed class OpenAITextEmbeddingGeneration : OpenAIClientBase, IEmbeddingGeneration<string, float>
+public sealed class OpenAITextEmbeddingGeneration : OpenAIClientBase, ITextEmbeddingGeneration
 {
     /// <summary>
     /// Create an instance of the OpenAI text embedding connector
@@ -22,14 +23,14 @@ public sealed class OpenAITextEmbeddingGeneration : OpenAIClientBase, IEmbedding
     /// <param name="apiKey">OpenAI API Key</param>
     /// <param name="organization">OpenAI Organization Id (usually optional)</param>
     /// <param name="httpClient">Custom <see cref="HttpClient"/> for HTTP requests.</param>
-    /// <param name="logger">Application logger</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If null, no logging will be performed.</param>
     public OpenAITextEmbeddingGeneration(
         string modelId,
         string apiKey,
         string? organization = null,
         HttpClient? httpClient = null,
-        ILogger? logger = null
-    ) : base(modelId, apiKey, organization, httpClient, logger)
+        ILoggerFactory? loggerFactory = null
+    ) : base(modelId, apiKey, organization, httpClient, loggerFactory)
     {
     }
 
@@ -39,10 +40,11 @@ public sealed class OpenAITextEmbeddingGeneration : OpenAIClientBase, IEmbedding
     /// <param name="data">List of strings to generate embeddings for</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests. The default is <see cref="CancellationToken.None"/>.</param>
     /// <returns>List of embeddings</returns>
-    public Task<IList<Embedding<float>>> GenerateEmbeddingsAsync(
+    public Task<IList<ReadOnlyMemory<float>>> GenerateEmbeddingsAsync(
         IList<string> data,
         CancellationToken cancellationToken = default)
     {
-        return this.InternalGenerateTextEmbeddingsAsync(data, cancellationToken);
+        this.LogActionDetails();
+        return this.InternalGetEmbeddingsAsync(data, cancellationToken);
     }
 }

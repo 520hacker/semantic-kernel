@@ -13,7 +13,7 @@ namespace Microsoft.SemanticKernel.Orchestration;
 public class ContextVariablesConverter : JsonConverter<ContextVariables>
 {
     /// <summary>
-    /// Read the JSON and convert to ContextVariables
+    /// Read the JSON and convert to ContextVariables.
     /// </summary>
     /// <param name="reader">The JSON reader.</param>
     /// <param name="typeToConvert">The type to convert.</param>
@@ -26,12 +26,25 @@ public class ContextVariablesConverter : JsonConverter<ContextVariables>
 
         foreach (var kvp in keyValuePairs!)
         {
+            if (string.IsNullOrWhiteSpace(kvp.Key))
+            {
+                // Json deserialization behaves differently in different versions of .NET. In some cases, the above "Deserialize" call
+                // throws on a null key, and in others it does not. This check is to ensure that we throw in all cases.
+                throw new JsonException("'Key' property cannot be null or empty.");
+            }
+
             context.Set(kvp.Key, kvp.Value);
         }
 
         return context;
     }
 
+    /// <summary>
+    /// Write the ContextVariables to JSON.
+    /// </summary>
+    /// <param name="writer">The JSON writer.</param>
+    /// <param name="value">The <see cref="ContextVariables"/> to write.</param>
+    /// <param name="options">The JSON serializer options.</param>
     public override void Write(Utf8JsonWriter writer, ContextVariables value, JsonSerializerOptions options)
     {
         writer.WriteStartArray();

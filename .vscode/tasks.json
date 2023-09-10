@@ -1,42 +1,49 @@
 {
   "version": "2.0.0",
   "tasks": [
+    // *****************************
+    // Contributing (dotnet) - Setup
+    // *****************************
     {
-      "label": "build (KernelSyntaxExamples)",
+      "label": "setup (contributing-R#)",
+      "detail": "",
+      "group": "build",
+      "dependsOn": ["new tool-manifest", "# Setup"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "new tool-manifest",
+      "detail": "Install ReSharper Global Tools",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["new", "tool-manifest"],
+      "options": {
+        "cwd": "${workspaceFolder}/dotnet"
+      }
+    },
+    {
+      "label": "R# Setup",
+      "detail": "Install ReSharper Global Tools",
       "command": "dotnet",
       "type": "process",
       "args": [
-        "build",
-        "${workspaceFolder}/samples/dotnet/kernel-syntax-examples/KernelSyntaxExamples.csproj",
-        "/property:GenerateFullPaths=true",
-        "/consoleloggerparameters:NoSummary",
-        "/property:DebugType=portable"
+        "tool",
+        "install",
+        "JetBrains.ReSharper.GlobalTools",
+        "--global"
       ],
-      "problemMatcher": "$msCompile",
-      "group": "build"
+      "options": {
+        "cwd": "${workspaceFolder}/dotnet"
+      }
     },
+    // Code Formatting
     {
-      "label": "watch (KernelSyntaxExamples)",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "watch",
-        "run",
-        "--project",
-        "${workspaceFolder}/samples/dotnet/kernel-syntax-examples/KernelSyntaxExamples.csproj"
-      ],
-      "problemMatcher": "$msCompile",
-      "group": "build"
-    },
-    // If R# commands fails run:
-    // - dotnet new tool-manifest
-    // - dotnet tool install JetBrains.ReSharper.GlobalTools
-    {
+      // Requires 'R# Install' to be run first
       // r# inspect - dotnet jb inspectcode -o="inspectcode.log" --no-build -s=".\SK-dotnet.sln.DotSettings" -f=Text ".\SK-dotnet.sln"
-      "label": "R# check",
+      "label": "format-check (contributing-R#)",
       "command": "dotnet",
       "type": "process",
-      "group": "test",
+      "group": "build",
       "args": [
         "jb",
         "inspectcode",
@@ -52,10 +59,10 @@
     },
     {
       // r# cleanup - dotnet jb cleanupcode --no-build -p="Built-in: Reformat Code" -s=SK-dotnet.sln.DotSettings SK-dotnet.sln
-      "label": "R# cleanup",
+      "label": "format (contributing-R#)",
       "command": "dotnet",
       "type": "process",
-      "group": "test",
+      "group": "build",
       "args": [
         "jb",
         "cleanupcode",
@@ -70,19 +77,71 @@
       }
     },
     {
-      "label": "PR - Validate",
+      "label": "validate (contributing-Format-Build-Test-Run)",
       "detail": "Runs tasks to validate changes before checking in.",
-      "group": "test",
+      "group": "build",
       "dependsOn": [
         "R# cleanup",
-        "Build - Semantic-Kernel",
-        "Test - Semantic-Kernel",
-        "Run - Kernel-Demo"
+        "build (Semantic-Kernel)",
+        "test (Semantic-Kernel",
+        "run (Kernel-Demo)"
       ],
       "dependsOrder": "sequence"
     },
+    // *****************************
+    // Contributing (python) - Setup
+    // *****************************
     {
-      "label": "Build - Semantic-Kernel",
+      "label": "setup (contributing-python)",
+      "detail": "",
+      "group": "build",
+      "dependsOn": ["install poetry", "install python packages"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "install poetry",
+      "detail": "Install poetry",
+      "command": "pip3",
+      "type": "shell",
+      "args": ["install", "poetry"],
+      "options": {
+        "cwd": "${workspaceFolder}/python"
+      }
+    },
+    {
+      "label": "install python packages",
+      "detail": "Install python packages",
+      "command": "poetry",
+      "type": "shell",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/python"
+      }
+    },
+    // Formatting
+    {
+      "label": "validate (contributing-python)",
+      "command": "poetry",
+      "type": "shell",
+      "group": "build",
+      "args": [
+        "run",
+        "pre-commit",
+        "run",
+        "-c",
+        ".conf/.pre-commit-config.yaml",
+        "-a"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/python"
+      }
+    },
+    // ***************
+    // Kernel (dotnet)
+    // ***************
+    // Build
+    {
+      "label": "build (Semantic-Kernel)",
       "command": "dotnet",
       "type": "process",
       "args": [
@@ -99,8 +158,9 @@
         "group": "PR-Validate"
       }
     },
+    // Test
     {
-      "label": "Test - Semantic-Kernel",
+      "label": "test (Semantic-Kernel)",
       "command": "dotnet",
       "type": "process",
       "args": ["test", "SemanticKernel.UnitTests.csproj"],
@@ -116,7 +176,7 @@
       }
     },
     {
-      "label": "Test - Semantic-Kernel (Code Coverage)",
+      "label": "test (Semantic-Kernel (Code Coverage))",
       "command": "dotnet",
       "type": "process",
       "args": [
@@ -140,7 +200,7 @@
       }
     },
     {
-      "label": "Test - Extensions (Code Coverage)",
+      "label": "test (Extensions (Code Coverage))",
       "command": "dotnet",
       "type": "process",
       "args": [
@@ -164,7 +224,7 @@
       }
     },
     {
-      "label": "Test - ALL (Code Coverage)",
+      "label": "test (ALL (Code Coverage))",
       "command": "dotnet",
       "type": "process",
       "args": [
@@ -187,7 +247,7 @@
       }
     },
     {
-      "label": "Test - Semantic-Kernel Integration (Code Coverage)",
+      "label": "test (Semantic-Kernel Integration (Code Coverage))",
       "command": "dotnet",
       "type": "process",
       "args": [
@@ -210,14 +270,97 @@
         "cwd": "${workspaceFolder}/dotnet/src/IntegrationTests/"
       }
     },
+    // ****************
+    // Kernel (python)
+    // ****************
+    // Test
     {
-      "label": "Run - Kernel-Demo",
+      "label": "test (Semantic-Kernel-Python)",
+      "command": "poetry",
+      "type": "shell",
+      "args": ["run", "pytest", "tests/unit"],
+      "problemMatcher": "$msCompile",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "group": "PR-Validate"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/python"
+      }
+    },
+    {
+      "label": "test (Semantic-Kernel-Python Integration)",
+      "command": "poetry",
+      "type": "shell",
+      "args": ["run", "pytest", "tests/integration", "-k", "${input:filter}"],
+      "problemMatcher": "$msCompile",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "group": "PR-Validate"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/python"
+      }
+    },
+    {
+      "label": "test (Semantic-Kernel-Python ALL)",
+      "command": "poetry",
+      "type": "shell",
+      "args": ["run", "pytest", "tests", "-k", "${input:filter}"],
+      "problemMatcher": "$msCompile",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "group": "PR-Validate"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/python"
+      }
+    },
+    // ****************
+    // Samples (dotnet)
+    // ****************
+    // Kernel Syntax Examples
+    {
+      "label": "build (KernelSyntaxExamples)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/dotnet/samples/KernelSyntaxExamples/KernelSyntaxExamples.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "/property:DebugType=portable"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build"
+    },
+    {
+      "label": "watch (KernelSyntaxExamples)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "${workspaceFolder}/dotnet/samples/KernelSyntaxExamples/KernelSyntaxExamples.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "build"
+    },
+    {
+      "label": "run (KernelSyntaxExamples)",
       "command": "dotnet",
       "type": "process",
       "args": [
         "run",
         "--project",
-        "${workspaceFolder}/samples/dotnet/kernel-syntax-examples/KernelSyntaxExamples.csproj"
+        "${workspaceFolder}/dotnet/samples/KernelSyntaxExamples/KernelSyntaxExamples.csproj"
       ],
       "problemMatcher": "$msCompile",
       "group": "test",
@@ -227,8 +370,9 @@
         "group": "PR-Validate"
       }
     },
+    // KernelHttpServer
     {
-      "label": "Run - Kernel HTTP Server",
+      "label": "run (KernelHttpServer)",
       "command": "func",
       "type": "shell",
       "args": ["start", "--csharp"],
@@ -242,8 +386,9 @@
         "group": "Run-Samples"
       }
     },
+    // chat-summary-webapp-react
     {
-      "label": "Run - Starter Chat WebApp React",
+      "label": "run (Starter Chat WebApp React)",
       "command": "yarn",
       "type": "shell",
       "args": ["start"],
@@ -257,8 +402,9 @@
         "group": "Run-Samples"
       }
     },
+    // book-creator-webapp-react
     {
-      "label": "Run - Book Creator WebApp React",
+      "label": "run (Book Creator WebApp React)",
       "command": "yarn",
       "type": "shell",
       "args": ["start"],
@@ -272,8 +418,9 @@
         "group": "Run-Samples"
       }
     },
+    // auth-api-webapp-react
     {
-      "label": "Run - Auth API WebApp React",
+      "label": "run (Auth API WebApp React)",
       "command": "yarn",
       "type": "shell",
       "args": ["start"],

@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.Http;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SemanticFunctions;
+using Microsoft.SemanticKernel.Services;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Microsoft.SemanticKernel.TemplateEngine;
 
@@ -18,14 +20,9 @@ namespace Microsoft.SemanticKernel;
 public interface IKernel
 {
     /// <summary>
-    /// Settings required to execute functions, including details about AI dependencies, e.g. endpoints and API keys.
-    /// </summary>
-    KernelConfig Config { get; }
-
-    /// <summary>
     /// App logger
     /// </summary>
-    ILogger Log { get; }
+    ILoggerFactory LoggerFactory { get; }
 
     /// <summary>
     /// Semantic memory instance
@@ -41,6 +38,11 @@ public interface IKernel
     /// Reference to the read-only skill collection containing all the imported functions
     /// </summary>
     IReadOnlySkillCollection Skills { get; }
+
+    /// <summary>
+    /// Reference to Http handler factory
+    /// </summary>
+    IDelegatingHandlerFactory HttpHandlerFactory { get; }
 
     /// <summary>
     /// Build and register a function in the internal skill collection, in a global generic skill.
@@ -67,10 +69,9 @@ public interface IKernel
     /// <summary>
     /// Registers a custom function in the internal skill collection.
     /// </summary>
-    /// <param name="skillName">Name of the skill containing the function. The name can contain only alphanumeric chars + underscore.</param>
     /// <param name="customFunction">The custom function to register.</param>
     /// <returns>A C# function wrapping the function execution logic.</returns>
-    ISKFunction RegisterCustomFunction(string skillName, ISKFunction customFunction);
+    ISKFunction RegisterCustomFunction(ISKFunction customFunction);
 
     /// <summary>
     /// Import a set of functions from the given skill. The functions must have the `SKFunction` attribute.
@@ -79,13 +80,25 @@ public interface IKernel
     /// <param name="skillInstance">Instance of a class containing functions</param>
     /// <param name="skillName">Name of the skill for skill collection and prompt templates. If the value is empty functions are registered in the global namespace.</param>
     /// <returns>A list of all the semantic functions found in the directory, indexed by function name.</returns>
-    IDictionary<string, ISKFunction> ImportSkill(object skillInstance, string skillName = "");
+    IDictionary<string, ISKFunction> ImportSkill(object skillInstance, string? skillName = null);
 
     /// <summary>
     /// Set the semantic memory to use
     /// </summary>
     /// <param name="memory">Semantic memory instance</param>
     void RegisterMemory(ISemanticTextMemory memory);
+
+    /// <summary>
+    /// Run a single synchronous or asynchronous <see cref="ISKFunction"/>.
+    /// </summary>
+    /// <param name="skFunction">A Semantic Kernel function to run</param>
+    /// <param name="variables">Input to process</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests. The default is <see cref="CancellationToken.None"/>.</param>
+    /// <returns>Result of the function</returns>
+    Task<SKContext> RunAsync(
+        ISKFunction skFunction,
+        ContextVariables? variables = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Run a pipeline composed of synchronous and asynchronous functions.
@@ -170,5 +183,5 @@ public interface IKernel
     /// <param name="name">Optional name. If the name is not provided, returns the default T available</param>
     /// <typeparam name="T">Service type</typeparam>
     /// <returns>Instance of T</returns>
-    T GetService<T>(string? name = null);
+    T GetService<T>(string? name = null) where T : IAIService;
 }

@@ -36,9 +36,10 @@ public static class DotProductOperation
             ReadOnlySpan<double> doubleSpanY = MemoryMarshal.Cast<TNumber, double>(y);
             return DotProductImplementation(doubleSpanX, doubleSpanY);
         }
-
-        SupportedTypes.ThrowTypeNotSupported<TNumber>();
-        return default;
+        else
+        {
+            throw new NotSupportedException();
+        }
     }
 
     /// <summary>
